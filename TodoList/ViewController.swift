@@ -7,89 +7,85 @@
 
 import UIKit
 
-class ViewController: BaseViewController {
-  private let label: UILabel = {
-    let label = UILabel()
-    label.text = "Todo List"
-    label.font = .systemFont(ofSize: 18, weight: .medium)
-    return label
-  }()
-  
-  private let tableView: UITableView = {
-    let table = UITableView()
+class ViewController: UIViewController {
+    @IBOutlet var tableView: UITableView!
     
-    return table
-  }()
-  
-  private let addButtonView: UIButton = {
-    let button = UIButton(type: .system)
-    let iconView = UIImage(systemName: "plus")
-    iconView?.withTintColor(.blue)
-    button.setImage(iconView, for: .normal)
-    return button
-  }()
-  
-  override func viewDidLoad() {
-    super.viewDidLoad()
-    // Do any additional setup after loading the view.
-    setupLayout()
-  }
-
-  @objc private func addButtonAction(_ sender: Any) {
-    print("Tapped")
-  }
-  
+    private var tasks: [Todo] = [
+        Todo(id: 0, title: "Apple", desc: "Apple desc", status: false),
+        Todo(id: 1, title: "Samsung", desc: "Samsung desc", status: false),
+        Todo(id: 2, title: "Nokia", desc: "Nokia desc", status: false)
+    ]
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        // Do any additional setup after loading the view.
+        setupLayout()
+    }
+    
+    private func setupLayout() {
+        tableView.delegate = self
+        tableView.dataSource = self
+        tableView.register(TodoTableViewCell.self, forCellReuseIdentifier: "TodoTableViewCell")
+        
+        // Setup
+        if !UserDefaultsHelper.shared.getSetup() {
+            UserDefaultsHelper.shared.setSetup(newValue: true)
+            UserDefaultsHelper.shared.setCount(newValue: 0)
+        }
+        
+        // Get all current save tasks
+        self.updateTasks()
+    }
+    
+    private func updateTasks() {
+        self.tasks.removeAll()
+        let count = UserDefaultsHelper.shared.getCount()
+        for x in 0..<count {
+            if let task = UserDefaultsHelper.shared.getTask(forKey: "task_\(x+1)") {
+                self.tasks.append(Todo(id: Int64(x+1), title: task, desc: "task_\(x+1)", status: false))
+            }
+        }
+        self.tableView.reloadData()
+    }
+    
+    @IBAction func didTapAdd() {
+        let vc = storyboard?.instantiateViewController(withIdentifier: "entry") as! EntryViewController
+        vc.title = "New Task"
+        vc.update = {
+            // Cập nhật thay đổi UI với luồng chính
+            DispatchQueue.main.async {
+                self.updateTasks()
+            }
+        }
+        navigationController?.pushViewController(vc, animated: true)
+    }
 }
 
-extension ViewController {
-  private func setupLayout() {
-    tableView.delegate = self
-    tableView.dataSource = self
-    
-    view.addSubview(label)
-    view.addSubview(tableView)
-    view.addSubview(addButtonView)
-    
-    label.translatesAutoresizingMaskIntoConstraints = false
-    tableView.translatesAutoresizingMaskIntoConstraints = false
-    addButtonView.translatesAutoresizingMaskIntoConstraints = false
-    
-    // Setup constraint
-    NSLayoutConstraint.activate([
-      // Label
-      label.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
-      label.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-
-      // Button
-      addButtonView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-      addButtonView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -16),
-      addButtonView.widthAnchor.constraint(equalToConstant: 32),
-      addButtonView.heightAnchor.constraint(equalToConstant: 32),
-
-      // TableView
-      tableView.topAnchor.constraint(equalTo: label.bottomAnchor),
-      tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-      tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-      tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor)
-    ])
-
-    addButtonView.addTarget(self, action: #selector(addButtonAction), for: .touchUpInside)
-  }
+extension ViewController: UITableViewDelegate {
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        tableView.deselectRow(at: indexPath, animated: true)
+        
+        let vc = storyboard?.instantiateViewController(withIdentifier: "task") as! TaskViewController
+        vc.title = "New task"
+        vc.task = self.tasks[indexPath.row]
+        navigationController?.pushViewController(vc, animated: true)
+    }
 }
 
-extension ViewController: UITableViewDelegate, UITableViewDataSource {
-  func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-    let cell = UITableViewCell()
-    cell.textLabel?.text = "\(indexPath)"
-    return cell
-  }
-  
-  func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-    return 100
-  }
-  
-  func numberOfSections(in tableView: UITableView) -> Int {
-    return 10
-  }
-  
+extension ViewController: UITableViewDataSource {
+    
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        return 52
+    }
+    
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return self.tasks.count
+    }
+    
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = self.tableView.dequeueReusableCell(withIdentifier: "cell", for: indexPath)
+        cell.textLabel?.text = self.tasks[indexPath.row].title
+        return cell
+    }
+    
 }

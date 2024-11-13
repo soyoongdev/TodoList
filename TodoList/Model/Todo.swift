@@ -7,9 +7,9 @@
 
 import Foundation
 
-struct Todo: Identifiable {
-  var id: UUID
+struct Todo: Codable {
+  var id: Int64
   var title: String
-  var description: String
-  var status: Status
+  var desc: String
+  var status: Bool
 }

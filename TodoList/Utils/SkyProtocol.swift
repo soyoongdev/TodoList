@@ -7,8 +7,8 @@
 
 import Foundation
 
-enum Status {
+enum Status: Codable {
   case normal
   case warning
-  case Error
+  case error
 }
